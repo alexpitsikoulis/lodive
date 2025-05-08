@@ -52,6 +52,7 @@ program lodive.aleo {
         owner: address,
         event_id: field,
         num_tickets: u32,
+        ticket_price: u64,
     }
 
     ///////////////////////////
