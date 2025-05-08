@@ -25,10 +25,12 @@ program lodive.aleo {
         id: field,
         // ID of the venue hosting the event.
         venue_id: field,
+        // Number of tickets available for the event.
+        ticket_supply: u32,
+        // Price per ticket in microcredits.
+        ticket_price: u64,
         // Number of sold tickets which have been redeemed.
         redeemed_tickets: u32,
-        // Price per ticket in microcredits.
-        base_ticket_price: u64,
         // Boolean value denoting whether or not the event has ended.
         is_ended: bool,
         // Boolean value denoting whether or not a refund has been issued.
@@ -84,13 +86,14 @@ program lodive.aleo {
     async transition register_event(
         id: field,
         ticket_supply: u32,
-        base_ticket_price: u64,
+        ticket_price: u64,
         venue_id: field,
         event_owner: field,
     ) -> Future {
         let event: Event = Event {
             id,
-            base_ticket_price,
+            ticket_supply,
+            ticket_price,
             redeemed_tickets: 0u32,
             is_ended: false,
             is_refunded: false,
