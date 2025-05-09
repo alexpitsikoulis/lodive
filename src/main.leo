@@ -52,10 +52,24 @@ program lodive.aleo {
     //////////////////////////////////
     record Tickets {
         owner: address,
+        // Unique identifier for the event.
         event_id: field,
+        // Number of tickets purchased.
         num_tickets: u32,
+        // Price per ticket in microcredits.
         ticket_price: u64,
     }
+
+    // Struct representing a ticket holder for an event. To be hashed as the key for the `tickets_sold` mapping.
+    struct TicketHolder {
+        // Unique identifier for the event.
+        event_id: field,
+        // Hash of the address of the ticket holder.
+        owner_hash: field,
+    }
+
+    // Mapping of TicketHolder to the number of tickets the records hold.
+    mapping tickets_sold: TicketHolder => u32;
 
     ///////////////////////////
     /// Initialize a venue. ///
@@ -202,5 +216,14 @@ program lodive.aleo {
         // Add the amount owed to the event owner.
         let new_payout: u64 = payouts.get_or_use(event.id, 0u64) + (ticket_price * num_tickets as u64);
         payouts.set(event.event_owner, new_payout);
+
+        let ticket_holder: TicketHolder = TicketHolder{
+            event_id,
+            owner_hash: caller_hash
+        };
+
+        // Update the number of tickets sold to for the event.
+        let prev_tickets_sold: u32 = tickets_sold.get_or_use(ticket_holder, 0u32);
+        tickets_sold.set(ticket_holder, prev_tickets_sold + num_tickets);
     }
 }

@@ -23,6 +23,10 @@ struct Event:
     is_refunded as boolean;
     event_owner as field;
 
+struct TicketHolder:
+    event_id as field;
+    owner_hash as field;
+
 mapping venues:
     key as field.public;
     value as Venue.public;
@@ -34,6 +38,10 @@ mapping events:
 mapping payouts:
     key as field.public;
     value as u64.public;
+
+mapping tickets_sold:
+    key as TicketHolder.public;
+    value as u32.public;
 
 function register_venue:
     input r0 as field.private;
@@ -129,3 +137,7 @@ finalize buy_tickets:
     mul r2 r16 into r17;
     add r15 r17 into r18;
     set r18 into payouts[r5.event_owner];
+    cast r0 r3 into r19 as TicketHolder;
+    get.or_use tickets_sold[r19] 0u32 into r20;
+    add r20 r1 into r21;
+    set r21 into tickets_sold[r19];
