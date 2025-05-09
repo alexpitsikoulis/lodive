@@ -37,6 +37,8 @@ program lodive.aleo {
         is_ended: bool,
         // Boolean value denoting whether or not a refund has been issued.
         is_refunded: bool,
+        // Boolean value denoting whether or not the event was verified to have occurred.
+        is_verified: bool,
         // Hash of the address of the owner of the event who will receive payment for purchased tickets.
         event_owner: field,
     }
@@ -115,6 +117,7 @@ program lodive.aleo {
             redeemed_tickets: 0u32,
             is_ended: false,
             is_refunded: false,
+            is_verified: false,
             event_owner,
             venue_id,
         };
@@ -146,8 +149,8 @@ program lodive.aleo {
         event_id: field,
         num_tickets: u32,
         ticket_price: u64,
-        buyer_record: credits.aleo/credits,
-    ) -> (Tickets, credits.aleo/credits, Future) {
+        private buyer_record: credits.aleo/credits,
+    ) -> (private Tickets, private credits.aleo/credits, Future) {
         let (change, transfer_fut): (credits.aleo/credits, Future) = credits.aleo/transfer_private_to_public(
             buyer_record,
             lodive.aleo,
@@ -207,6 +210,7 @@ program lodive.aleo {
             redeemed_tickets: event.redeemed_tickets,
             is_ended: event.is_ended,
             is_refunded: event.is_refunded,
+            is_verified: event.is_verified,
             event_owner: event.event_owner,
         });
 
@@ -225,5 +229,116 @@ program lodive.aleo {
         // Update the number of tickets sold to for the event.
         let prev_tickets_sold: u32 = tickets_sold.get_or_use(ticket_holder, 0u32);
         tickets_sold.set(ticket_holder, prev_tickets_sold + num_tickets);
+    }
+
+    ////////////////////////////////////
+    /// Claim a refund for an event. ///
+    ////////////////////////////////////
+    async transition claim_refund(
+        event_id: field,
+        amount: u64,
+        private tickets: Tickets,
+        private venue_owner: address,
+        venue_commission_rate: u8,
+    ) -> (private credits.aleo/credits, Future) {
+        assert_eq(tickets.owner, self.caller);
+
+        // Privately transfer the refund to the caller.
+        let (refund, transfer_fut): (credits.aleo/credits, Future) = credits.aleo/transfer_public_to_private(
+            self.caller,
+            amount,
+        );
+
+        return (refund, finalize_claim_refund(
+            event_id,
+            BHP1024::hash_to_field(self.caller),
+            amount,
+            tickets.num_tickets,
+            transfer_fut,
+        ));
+    }
+
+    async function finalize_claim_refund(
+        event_id: field,
+        caller_hash: field,
+        amount: u64,
+        num_tickets: u32,
+        transfer_fut: Future,
+    ) {
+        let event: Event = events.get(event_id);
+        // Ensure the event was not ended.
+        assert(!event.is_ended);
+        // Ensure the event was not verified to have occurred.
+        assert(!event.is_verified);
+        // Ensure the event was refunded.
+        assert(event.is_refunded);
+
+        let ticket_holder: TicketHolder = TicketHolder{
+            event_id,
+            owner_hash: caller_hash
+        };
+        let tickets_sold_to_caller: u32 = tickets_sold.get(ticket_holder);
+        // Ensure the number of tickets sold to the caller matches the number refunded.
+        assert_eq(num_tickets, tickets_sold_to_caller);
+
+
+        // Await the transfer future.
+        transfer_fut.await();
+    }
+
+    //////////////////////////////////////
+    /// Claim a payout for your event. ///
+    //////////////////////////////////////
+    async transition claim_payout(
+        event_id: field,
+        amount: u64,
+        private venue_owner: address,
+        venue_commission_rate: u8,
+    ) -> (private credits.aleo/credits, private credits.aleo/credits, Future) {
+        // Calculate the payout for the venue and the event owner.
+        let venue_payout: u64 = amount * venue_commission_rate as u64 / 100u64;
+        let event_owner_payout: u64 = amount - venue_payout;
+
+        // Privately transfer the payout to the event owner and venue owner.
+        let (event_owner_credits, event_owner_transfer_fut): (credits.aleo/credits, Future) = credits.aleo/transfer_public_to_private(self.caller, event_owner_payout);
+        let (venue_owner_credits, venue_owner_transfer_fut): (credits.aleo/credits, Future) = credits.aleo/transfer_public_to_private(venue_owner, venue_payout);
+
+        return (event_owner_credits, venue_owner_credits, finalize_claim_payout(
+            event_id,
+            BHP1024::hash_to_field(self.caller),
+            amount,
+            BHP1024::hash_to_field(venue_owner),
+            venue_commission_rate,
+            event_owner_transfer_fut,
+            venue_owner_transfer_fut,
+        ));
+    }
+
+    async function finalize_claim_payout(
+        event_id: field,
+        caller_hash: field,
+        amount: u64,
+        venue_owner_hash: field,
+        venue_commission_rate: u8,
+        event_owner_transfer_fut: Future,
+        venue_owner_transfer_fut: Future,
+    ) {
+        let event: Event = events.get(event_id);
+        // Ensure the event was verified to have occurred.
+        assert(event.is_verified);
+        // Ensure the caller is the event owner.
+        assert_eq(caller_hash, BHP1024::hash_to_field(event.event_owner));
+
+        let venue: Venue = venues.get(event.venue_id);
+        // Ensure the venue owner is correct.
+        assert_eq(venue_owner_hash, BHP1024::hash_to_field(venue.venue_owner));
+        assert_eq(venue_commission_rate, venue.commission_rate);
+
+        let payout: u64 = payouts.get(event_id);
+        // Ensure the payout amount is correct.
+        assert_eq(payout, amount);
+    
+        event_owner_transfer_fut.await();
+        venue_owner_transfer_fut.await();
     }
 }

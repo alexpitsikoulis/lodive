@@ -21,6 +21,7 @@ struct Event:
     redeemed_tickets as u32;
     is_ended as boolean;
     is_refunded as boolean;
+    is_verified as boolean;
     event_owner as field;
 
 struct TicketHolder:
@@ -71,7 +72,7 @@ function register_event:
     input r2 as u64.private;
     input r3 as field.private;
     input r4 as field.private;
-    cast r0 r3 r1 r1 r2 0u32 false false r4 into r5 as Event;
+    cast r0 r3 r1 r1 r2 0u32 false false false r4 into r5 as Event;
     hash.bhp1024 self.caller into r6 as field;
     async register_event r5 r6 into r7;
     output r7 as lodive.aleo/register_event.future;
@@ -129,7 +130,7 @@ finalize buy_tickets:
     hash.bhp1024 r11.venue_owner into r12 as field;
     assert.eq r3 r12;
     sub r5.ticket_supply r1 into r13;
-    cast r5.id r5.venue_id r13 r5.initial_ticket_supply r5.ticket_price r5.redeemed_tickets r5.is_ended r5.is_refunded r5.event_owner into r14 as Event;
+    cast r5.id r5.venue_id r13 r5.initial_ticket_supply r5.ticket_price r5.redeemed_tickets r5.is_ended r5.is_refunded r5.is_verified r5.event_owner into r14 as Event;
     set r14 into events[r0];
     await r4;
     get.or_use payouts[r5.id] 0u64 into r15;
@@ -141,3 +142,72 @@ finalize buy_tickets:
     get.or_use tickets_sold[r19] 0u32 into r20;
     add r20 r1 into r21;
     set r21 into tickets_sold[r19];
+
+function claim_refund:
+    input r0 as field.private;
+    input r1 as u64.private;
+    input r2 as Tickets.record;
+    input r3 as address.private;
+    input r4 as u8.private;
+    assert.eq r2.owner self.caller;
+    call credits.aleo/transfer_public_to_private self.caller r1 into r5 r6;
+    hash.bhp1024 self.caller into r7 as field;
+    async claim_refund r0 r7 r1 r2.num_tickets r6 into r8;
+    output r5 as credits.aleo/credits.record;
+    output r8 as lodive.aleo/claim_refund.future;
+
+finalize claim_refund:
+    input r0 as field.public;
+    input r1 as field.public;
+    input r2 as u64.public;
+    input r3 as u32.public;
+    input r4 as credits.aleo/transfer_public_to_private.future;
+    get events[r0] into r5;
+    not r5.is_ended into r6;
+    assert.eq r6 true;
+    not r5.is_verified into r7;
+    assert.eq r7 true;
+    assert.eq r5.is_refunded true;
+    cast r0 r1 into r8 as TicketHolder;
+    get tickets_sold[r8] into r9;
+    assert.eq r3 r9;
+    await r4;
+
+function claim_payout:
+    input r0 as field.private;
+    input r1 as u64.private;
+    input r2 as address.private;
+    input r3 as u8.private;
+    cast r3 into r4 as u64;
+    mul r1 r4 into r5;
+    div r5 100u64 into r6;
+    sub r1 r6 into r7;
+    call credits.aleo/transfer_public_to_private self.caller r7 into r8 r9;
+    call credits.aleo/transfer_public_to_private r2 r6 into r10 r11;
+    hash.bhp1024 self.caller into r12 as field;
+    hash.bhp1024 r2 into r13 as field;
+    async claim_payout r0 r12 r1 r13 r3 r9 r11 into r14;
+    output r8 as credits.aleo/credits.record;
+    output r10 as credits.aleo/credits.record;
+    output r14 as lodive.aleo/claim_payout.future;
+
+finalize claim_payout:
+    input r0 as field.public;
+    input r1 as field.public;
+    input r2 as u64.public;
+    input r3 as field.public;
+    input r4 as u8.public;
+    input r5 as credits.aleo/transfer_public_to_private.future;
+    input r6 as credits.aleo/transfer_public_to_private.future;
+    get events[r0] into r7;
+    assert.eq r7.is_verified true;
+    hash.bhp1024 r7.event_owner into r8 as field;
+    assert.eq r1 r8;
+    get venues[r7.venue_id] into r9;
+    hash.bhp1024 r9.venue_owner into r10 as field;
+    assert.eq r3 r10;
+    assert.eq r4 r9.commission_rate;
+    get payouts[r0] into r11;
+    assert.eq r11 r2;
+    await r5;
+    await r6;
