@@ -390,6 +390,76 @@ program lodive.aleo {
     
 
     ////////////////////////////////////
+    /// Redeem tickets for an event. ///
+    ////////////////////////////////////
+    async transition redeem_tickets(
+        private tickets_record: Tickets,
+        tickets_redeemed: u32,
+    ) -> (private TicketRedemption, private Tickets, Future) {
+        // Ensure the record contains at least as many tickets as the number of tickets redeemed.
+        let tickets_held: u32 = tickets_record.num_tickets;
+        assert(tickets_redeemed.lte(tickets_held));
+
+        // Create a new tickets record with the remaining tickets.
+        let new_tickets: Tickets = Tickets {
+            owner: tickets_record.owner,
+            event_id: tickets_record.event_id,
+            num_tickets: tickets_held - tickets_redeemed,
+            ticket_price: tickets_record.ticket_price,
+        };
+
+        // Generate a redemption receipt code from the hash of the tickets record.
+        let receipt_code: scalar = BHP1024::hash_to_scalar(tickets_record);
+        let ticket_redemption: TicketRedemption = TicketRedemption {
+            owner: tickets_record.owner,
+            receipt_code,
+        };
+
+        // Generate a redemption key from the caller and the receipt code.
+        let redemption_key: field = BHP1024::commit_to_field(self.caller, receipt_code);
+
+        return (ticket_redemption, new_tickets, finalize_redeem_tickets(
+            tickets_record.event_id,
+            tickets_redeemed,
+            redemption_key,
+        ));
+    }
+    
+    async function finalize_redeem_tickets(
+        event_id: field,
+        tickets_redeemed: u32,
+        redemption_key: field,
+    ) {
+        let event: Event = events.get(event_id);
+
+        // Ensure the event has not already ended.
+        assert(!event.is_ended);
+        // Ensure the event has not already been refunded.
+        assert(!event.is_refunded);
+        // Ensure the event has not already been verified.
+        assert(!event.is_verified);
+
+        // Increment the number of tickets claimed.
+        let new_redeemed_tickets: u32 = event.redeemed_tickets + tickets_redeemed;
+        events.set(event_id, Event {
+            id: event.id,
+            venue_id: event.venue_id,
+            ticket_supply: event.ticket_supply,
+            initial_ticket_supply: event.initial_ticket_supply,
+            ticket_price: event.ticket_price,
+            redeemed_tickets: new_redeemed_tickets,
+            is_ended: event.is_ended,
+            is_refunded: event.is_refunded,
+            is_verified: event.is_verified,
+            event_owner: event.event_owner,
+        });
+
+        // Add the redemption to the redemptions mapping.
+        redemptions.set(redemption_key, tickets_redeemed);
+    }
+    
+
+    ////////////////////////////////////
     /// Claim a refund for an event. ///
     ////////////////////////////////////
     async transition claim_refund(

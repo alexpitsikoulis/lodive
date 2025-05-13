@@ -151,6 +151,7 @@ finalize buy_tickets:
     add r20 r1 into r21;
     set r21 into tickets_sold[r19];
 
+<<<<<<< HEAD
 function transfer_tickets:
     input r0 as Tickets.record;
     input r1 as address.private;
@@ -193,6 +194,8 @@ finalize transfer_tickets:
     hash.bhp1024 r4.event_owner into r12 as field;
     assert.neq r3 r12;
 
+=======
+>>>>>>> eb2518bb84818df9153cb7b238c083e707008429
 function redeem_tickets:
     input r0 as Tickets.record;
     input r1 as u32.private;
