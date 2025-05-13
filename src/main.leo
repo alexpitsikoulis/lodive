@@ -569,4 +569,39 @@ program lodive.aleo {
         event_owner_transfer_fut.await();
         venue_owner_transfer_fut.await();
     }
+
+    async transition verify_event(
+        event_id: field,
+    ) -> Future {
+        return finalize_verify_event(event_id, BHP1024::hash_to_field(self.caller));
+    }
+    
+    async function finalize_verify_event(
+        event_id: field,
+        caller_hash: field,
+    ) {
+        let event: Event = events.get(event_id);
+        // Ensure the event was not verified to have occurred.
+        assert(!event.is_verified);
+        // Ensure the event was not refunded.
+        assert(!event.is_refunded);
+        // Ensure the event was not ended.
+        assert(!event.is_ended);
+
+        // Ensure the caller is the event owner.
+        assert_eq(caller_hash, BHP1024::hash_to_field(event.event_owner));
+
+        events.set(event_id, Event {
+            id: event.id,
+            venue_id: event.venue_id,
+            ticket_supply: event.ticket_supply,
+            initial_ticket_supply: event.initial_ticket_supply,
+            ticket_price: event.ticket_price,
+            redeemed_tickets: event.redeemed_tickets,
+            is_ended: true,
+            is_refunded: false,
+            is_verified: true,
+            event_owner: event.event_owner,
+        });
+    }
 }
