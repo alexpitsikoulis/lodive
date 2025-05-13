@@ -206,7 +206,7 @@ program lodive.aleo {
         assert_neq(caller_hash, BHP1024::hash_to_field(event.event_owner));
 
         let venue: Venue = venues.get(event.venue_id);
-        // Esnure the buyer is not the venue owner.
+        // Ensure the buyer is not the venue owner.
         assert_eq(caller_hash, BHP1024::hash_to_field(venue.venue_owner));
 
         // Decrement the ticket supply.
@@ -240,6 +240,83 @@ program lodive.aleo {
         // Update the number of tickets sold to for the event.
         let prev_tickets_sold: u32 = tickets_sold.get_or_use(ticket_holder, 0u32);
         tickets_sold.set(ticket_holder, prev_tickets_sold + num_tickets);
+    }
+
+    //////////////////////////////////////
+    /// Transfer tickets for an event. ///
+    //////////////////////////////////////
+    async transition transfer_tickets(
+        private tickets_record: Tickets,
+        private new_owner: address,
+        private num_tickets: u32,
+        private credits: credits.aleo/credits,
+    ) -> (credits.aleo/credits, credits.aleo/credits, private Tickets, private Tickets, Future) {
+        // Pay using private credits.
+        let (paid_record, change_record): (credits.aleo/credits, credits.aleo/credits) = credits.aleo/transfer_private(
+            credits,
+            new_owner,
+            tickets_record.ticket_price * tickets_record.num_tickets as u64,
+        );
+
+        // Create a new tickets record with the new owner.
+        let new_tickets: Tickets = Tickets {
+            owner: new_owner,
+            event_id: tickets_record.event_id,
+            num_tickets: tickets_record.num_tickets,
+            ticket_price: tickets_record.ticket_price,
+        };
+
+        // Create a record for the remaining tickets if value gte 1.
+        if tickets_record.num_tickets > num_tickets {
+            let remaining_tickets: Tickets = Tickets {
+                owner: tickets_record.owner,
+                event_id: tickets_record.event_id,
+                num_tickets: tickets_record.num_tickets - num_tickets,
+                ticket_price: tickets_record.ticket_price,
+            };
+        }
+
+        // Create a record for the transferred tickets.
+        let remaining_tickets: Tickets = Tickets {
+            owner: tickets_record.owner,
+            event_id: tickets_record.event_id,
+            num_tickets: tickets_record.num_tickets - num_tickets,
+            ticket_price: tickets_record.ticket_price,
+        };
+
+        return (paid_record, change_record, new_tickets, remaining_tickets, finalize_transfer_tickets(
+            tickets_record.event_id,
+            BHP1024::hash_to_field(self.caller),
+            tickets_record.ticket_price,
+            BHP1024::hash_to_field(new_owner),
+        ));
+    }
+
+    async function finalize_transfer_tickets(
+        event_id: field,
+        caller_hash: field,
+        ticket_price: u64,
+        new_owner_hash: field,
+    ) {
+        let event: Event = events.get(event_id);
+        // Ensure the event has not already ended.
+        assert(!event.is_ended);
+        // Ensure the event has not already been refunded.
+        assert(!event.is_refunded);
+        // Ensure the event has not already been verified.
+        assert(!event.is_verified);
+        // Ensure the ticket price is correct.
+        assert(event.ticket_price.eq(ticket_price));
+
+        // Ensure the caller is not the event owner.
+        assert_neq(caller_hash, BHP1024::hash_to_field(event.event_owner));
+
+        let venue: Venue = venues.get(event.venue_id);
+        // Esnure the caller is not the venue owner.
+        assert_eq(caller_hash, BHP1024::hash_to_field(venue.venue_owner));
+
+        // Ensure the new owner is not the event owner.
+        assert_neq(new_owner_hash, BHP1024::hash_to_field(event.event_owner));
     }
 
     ////////////////////////////////////
