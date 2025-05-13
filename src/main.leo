@@ -67,7 +67,7 @@ program lodive.aleo {
     ////////////////////////////////////////////////////
     record TicketRedemption {
         owner: address,
-        receipt_code: field,
+        receipt_code: scalar,
     }
 
     // Mapping of commit(address, receipt_code) to the number of tickets redeemed.
@@ -339,7 +339,7 @@ program lodive.aleo {
         };
 
         // Generate a redemption receipt code from the hash of the tickets record.
-        let receipt_code: field = BHP1024::hash_to_field(tickets_record);
+        let receipt_code: scalar = BHP1024::hash_to_scalar(tickets_record);
         let ticket_redemption: TicketRedemption = TicketRedemption {
             owner: tickets_record.owner,
             receipt_code,
