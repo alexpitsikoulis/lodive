@@ -285,7 +285,7 @@ program lodive.aleo {
     //////////////////////////////////////////
     /// Transfer all tickets for an event. ///
     //////////////////////////////////////////
-    async transition transfer_some_tickets(
+    async transition transfer_all_tickets(
         private tickets_record: Tickets,
         private new_owner: address,
         private credits: credits.aleo/credits,

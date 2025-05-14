@@ -151,8 +151,7 @@ finalize buy_tickets:
     add r20 r1 into r21;
     set r21 into tickets_sold[r19];
 
-<<<<<<< HEAD
-function transfer_tickets:
+function transfer_some_tickets:
     input r0 as Tickets.record;
     input r1 as address.private;
     input r2 as u32.private;
@@ -165,14 +164,14 @@ function transfer_tickets:
     cast r0.owner r0.event_id r9 r0.ticket_price into r10 as Tickets.record;
     hash.bhp1024 self.caller into r11 as field;
     hash.bhp1024 r1 into r12 as field;
-    async transfer_tickets r0.event_id r11 r0.ticket_price r12 into r13;
+    async transfer_some_tickets r0.event_id r11 r0.ticket_price r12 into r13;
     output r6 as credits.aleo/credits.record;
     output r7 as credits.aleo/credits.record;
     output r8 as Tickets.record;
     output r10 as Tickets.record;
-    output r13 as lodive.aleo/transfer_tickets.future;
+    output r13 as lodive.aleo/transfer_some_tickets.future;
 
-finalize transfer_tickets:
+finalize transfer_some_tickets:
     input r0 as field.public;
     input r1 as field.public;
     input r2 as u64.public;
@@ -194,8 +193,44 @@ finalize transfer_tickets:
     hash.bhp1024 r4.event_owner into r12 as field;
     assert.neq r3 r12;
 
-=======
->>>>>>> eb2518bb84818df9153cb7b238c083e707008429
+function transfer_all_tickets:
+    input r0 as Tickets.record;
+    input r1 as address.private;
+    input r2 as credits.aleo/credits.record;
+    cast r0.num_tickets into r3 as u64;
+    mul r0.ticket_price r3 into r4;
+    call credits.aleo/transfer_private r2 r1 r4 into r5 r6;
+    cast r1 r0.event_id r0.num_tickets r0.ticket_price into r7 as Tickets.record;
+    hash.bhp1024 self.caller into r8 as field;
+    hash.bhp1024 r1 into r9 as field;
+    async transfer_all_tickets r0.event_id r8 r0.ticket_price r9 into r10;
+    output r5 as credits.aleo/credits.record;
+    output r6 as credits.aleo/credits.record;
+    output r7 as Tickets.record;
+    output r10 as lodive.aleo/transfer_all_tickets.future;
+
+finalize transfer_all_tickets:
+    input r0 as field.public;
+    input r1 as field.public;
+    input r2 as u64.public;
+    input r3 as field.public;
+    get events[r0] into r4;
+    not r4.is_ended into r5;
+    assert.eq r5 true;
+    not r4.is_refunded into r6;
+    assert.eq r6 true;
+    not r4.is_verified into r7;
+    assert.eq r7 true;
+    is.eq r4.ticket_price r2 into r8;
+    assert.eq r8 true;
+    hash.bhp1024 r4.event_owner into r9 as field;
+    assert.neq r1 r9;
+    get venues[r4.venue_id] into r10;
+    hash.bhp1024 r10.venue_owner into r11 as field;
+    assert.eq r1 r11;
+    hash.bhp1024 r4.event_owner into r12 as field;
+    assert.neq r3 r12;
+
 function redeem_tickets:
     input r0 as Tickets.record;
     input r1 as u32.private;
@@ -295,3 +330,25 @@ finalize claim_payout:
     assert.eq r11 r2;
     await r5;
     await r6;
+
+function verify_event:
+    input r0 as field.private;
+    hash.bhp1024 self.caller into r1 as field;
+    async verify_event r0 r1 into r2;
+    output r2 as lodive.aleo/verify_event.future;
+
+finalize verify_event:
+    input r0 as field.public;
+    input r1 as field.public;
+    get events[r0] into r2;
+    get venues[r2.venue_id] into r3;
+    hash.bhp1024 r3.venue_owner into r4 as field;
+    assert.eq r1 r4;
+    not r2.is_verified into r5;
+    assert.eq r5 true;
+    not r2.is_refunded into r6;
+    assert.eq r6 true;
+    not r2.is_ended into r7;
+    assert.eq r7 true;
+    cast r2.id r2.venue_id r2.ticket_supply r2.initial_ticket_supply r2.ticket_price r2.redeemed_tickets true false true r2.event_owner into r8 as Event;
+    set r8 into events[r0];
