@@ -242,15 +242,15 @@ program lodive.aleo {
         tickets_sold.set(ticket_holder, prev_tickets_sold + num_tickets);
     }
 
-    //////////////////////////////////////
-    /// Transfer tickets for an event. ///
-    //////////////////////////////////////
-    async transition transfer_tickets(
-        private tickets_record: Tickets,
+    ///////////////////////////////////////////
+    /// Transfer some tickets for an event. ///
+    ///////////////////////////////////////////
+    async transition transfer_some_tickets(
+        tickets_record: Tickets,
         private new_owner: address,
         private num_tickets: u32,
         private credits: credits.aleo/credits,
-    ) -> (credits.aleo/credits, credits.aleo/credits, private Tickets, private Tickets, Future) {
+    ) -> (credits.aleo/credits, credits.aleo/credits, Tickets, Tickets, Future) {
         // Pay using private credits.
         let (paid_record, change_record): (credits.aleo/credits, credits.aleo/credits) = credits.aleo/transfer_private(
             credits,
@@ -266,17 +266,7 @@ program lodive.aleo {
             ticket_price: tickets_record.ticket_price,
         };
 
-        // Create a record for the remaining tickets if value gte 1.
-        if tickets_record.num_tickets > num_tickets {
-            let remaining_tickets: Tickets = Tickets {
-                owner: tickets_record.owner,
-                event_id: tickets_record.event_id,
-                num_tickets: tickets_record.num_tickets - num_tickets,
-                ticket_price: tickets_record.ticket_price,
-            };
-        }
-
-        // Create a record for the transferred tickets.
+        // Return the remaining tickets as a new record.
         let remaining_tickets: Tickets = Tickets {
             owner: tickets_record.owner,
             event_id: tickets_record.event_id,
@@ -285,6 +275,37 @@ program lodive.aleo {
         };
 
         return (paid_record, change_record, new_tickets, remaining_tickets, finalize_transfer_tickets(
+            tickets_record.event_id,
+            BHP1024::hash_to_field(self.caller),
+            tickets_record.ticket_price,
+            BHP1024::hash_to_field(new_owner),
+        ));
+    }
+
+    //////////////////////////////////////////
+    /// Transfer all tickets for an event. ///
+    //////////////////////////////////////////
+    async transition transfer_some_tickets(
+        private tickets_record: Tickets,
+        private new_owner: address,
+        private credits: credits.aleo/credits,
+    ) -> (credits.aleo/credits, credits.aleo/credits, private Tickets, Future) {
+        // Pay using private credits.
+        let (paid_record, change_record): (credits.aleo/credits, credits.aleo/credits) = credits.aleo/transfer_private(
+            credits,
+            new_owner,
+            tickets_record.ticket_price * tickets_record.num_tickets as u64,
+        );
+
+        // Create a new tickets record with the new owner.
+        let new_tickets: Tickets = Tickets {
+            owner: new_owner,
+            event_id: tickets_record.event_id,
+            num_tickets: tickets_record.num_tickets,
+            ticket_price: tickets_record.ticket_price,
+        };
+
+        return (paid_record, change_record, new_tickets, finalize_transfer_tickets(
             tickets_record.event_id,
             BHP1024::hash_to_field(self.caller),
             tickets_record.ticket_price,
