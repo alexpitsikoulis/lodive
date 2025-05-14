@@ -511,15 +511,17 @@ program lodive.aleo {
         caller_hash: field,
     ) {
         let event: Event = events.get(event_id);
+        let venue: Venue = venues.get(event.venue_id);
+
+        // Ensure the caller is the event owner.
+        assert_eq(caller_hash, BHP1024::hash_to_field(venue.venue_owner));
+        
         // Ensure the event was not verified to have occurred.
         assert(!event.is_verified);
         // Ensure the event was not refunded.
         assert(!event.is_refunded);
         // Ensure the event was not ended.
         assert(!event.is_ended);
-
-        // Ensure the caller is the event owner.
-        assert_eq(caller_hash, BHP1024::hash_to_field(event.event_owner));
 
         events.set(event_id, Event {
             id: event.id,
