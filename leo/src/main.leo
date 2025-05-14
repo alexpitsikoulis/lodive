@@ -1,6 +1,6 @@
 import credits.aleo;
 
-program lodive.aleo {
+program lodive_v0_1_0.aleo {
 
     ///////////////////////////////////////////////////////////////////
     /// Define the venue structure. A venue is made up of sections. ///
