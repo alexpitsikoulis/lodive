@@ -41,6 +41,8 @@ program lodive.aleo {
         is_verified: bool,
         // Hash of the address of the owner of the event who will receive payment for purchased tickets.
         event_owner: field,
+        // Boolean value denoting whether or not the event is in progress.
+        is_in_progress: bool,
     }
 
     // Mapping of events by id.
@@ -131,6 +133,7 @@ program lodive.aleo {
             is_verified: false,
             event_owner,
             venue_id,
+            is_in_progress: false,
         };
 
         let caller_hash: field = BHP1024::hash_to_field(self.caller);
@@ -206,7 +209,7 @@ program lodive.aleo {
         assert_neq(caller_hash, BHP1024::hash_to_field(event.event_owner));
 
         let venue: Venue = venues.get(event.venue_id);
-        // Esnure the buyer is not the venue owner.
+        // Ensure the buyer is not the venue owner.
         assert_eq(caller_hash, BHP1024::hash_to_field(venue.venue_owner));
 
         // Decrement the ticket supply.
@@ -223,6 +226,7 @@ program lodive.aleo {
             is_refunded: event.is_refunded,
             is_verified: event.is_verified,
             event_owner: event.event_owner,
+            is_in_progress: event.is_in_progress,
         });
 
         // Await the transfer future.
@@ -240,6 +244,106 @@ program lodive.aleo {
         // Update the number of tickets sold to for the event.
         let prev_tickets_sold: u32 = tickets_sold.get_or_use(ticket_holder, 0u32);
         tickets_sold.set(ticket_holder, prev_tickets_sold + num_tickets);
+    }
+
+    ///////////////////////////////////////////
+    /// Transfer some tickets for an event. ///
+    ///////////////////////////////////////////
+    async transition transfer_some_tickets(
+        tickets_record: Tickets,
+        private new_owner: address,
+        private num_tickets: u32,
+        private credits: credits.aleo/credits,
+    ) -> (credits.aleo/credits, credits.aleo/credits, Tickets, Tickets, Future) {
+        // Pay using private credits.
+        let (paid_record, change_record): (credits.aleo/credits, credits.aleo/credits) = credits.aleo/transfer_private(
+            credits,
+            new_owner,
+            tickets_record.ticket_price * tickets_record.num_tickets as u64,
+        );
+
+        // Create a new tickets record with the new owner.
+        let new_tickets: Tickets = Tickets {
+            owner: new_owner,
+            event_id: tickets_record.event_id,
+            num_tickets: tickets_record.num_tickets,
+            ticket_price: tickets_record.ticket_price,
+        };
+
+        // Return the remaining tickets as a new record.
+        let remaining_tickets: Tickets = Tickets {
+            owner: tickets_record.owner,
+            event_id: tickets_record.event_id,
+            num_tickets: tickets_record.num_tickets - num_tickets,
+            ticket_price: tickets_record.ticket_price,
+        };
+
+        return (paid_record, change_record, new_tickets, remaining_tickets, finalize_transfer_tickets(
+            tickets_record.event_id,
+            BHP1024::hash_to_field(self.caller),
+            tickets_record.ticket_price,
+            BHP1024::hash_to_field(new_owner),
+        ));
+    }
+
+    //////////////////////////////////////////
+    /// Transfer all tickets for an event. ///
+    //////////////////////////////////////////
+    async transition transfer_all_tickets(
+        private tickets_record: Tickets,
+        private new_owner: address,
+        private credits: credits.aleo/credits,
+    ) -> (credits.aleo/credits, credits.aleo/credits, private Tickets, Future) {
+        // Pay using private credits.
+        let (paid_record, change_record): (credits.aleo/credits, credits.aleo/credits) = credits.aleo/transfer_private(
+            credits,
+            new_owner,
+            tickets_record.ticket_price * tickets_record.num_tickets as u64,
+        );
+
+        // Create a new tickets record with the new owner.
+        let new_tickets: Tickets = Tickets {
+            owner: new_owner,
+            event_id: tickets_record.event_id,
+            num_tickets: tickets_record.num_tickets,
+            ticket_price: tickets_record.ticket_price,
+        };
+
+        return (paid_record, change_record, new_tickets, finalize_transfer_tickets(
+            tickets_record.event_id,
+            BHP1024::hash_to_field(self.caller),
+            tickets_record.ticket_price,
+            BHP1024::hash_to_field(new_owner),
+        ));
+    }
+
+    async function finalize_transfer_tickets(
+        event_id: field,
+        caller_hash: field,
+        ticket_price: u64,
+        new_owner_hash: field,
+    ) {
+        let event: Event = events.get(event_id);
+        // Ensure the event is not in progress.
+        assert(!event.is_in_progress);
+        // Ensure the event has not already ended.
+        assert(!event.is_ended);
+        // Ensure the event has not already been refunded.
+        assert(!event.is_refunded);
+        // Ensure the event has not already been verified.
+        assert(!event.is_verified);
+        // Ensure the ticket price is correct.
+        assert(event.ticket_price.eq(ticket_price));
+
+        // Ensure the caller is not the event owner.
+        assert_neq(caller_hash, BHP1024::hash_to_field(event.event_owner));
+
+        let venue: Venue = venues.get(event.venue_id);
+        // Esnure the caller is not the venue owner.
+        assert_eq(caller_hash, BHP1024::hash_to_field(venue.venue_owner));
+
+        // Ensure the new owner is not the event owner.
+        assert_neq(new_owner_hash, BHP1024::hash_to_field(event.event_owner));
     }
 
     ////////////////////////////////////
@@ -305,6 +409,7 @@ program lodive.aleo {
             is_refunded: event.is_refunded,
             is_verified: event.is_verified,
             event_owner: event.event_owner,
+            is_in_progress: event.is_in_progress,
         });
 
         // Add the redemption to the redemptions mapping.
@@ -421,5 +526,102 @@ program lodive.aleo {
     
         event_owner_transfer_fut.await();
         venue_owner_transfer_fut.await();
+    }
+
+    async transition verify_event(
+        event_id: field,
+    ) -> Future {
+        return finalize_verify_event(event_id, BHP1024::hash_to_field(self.caller));
+    }
+    
+    async function finalize_verify_event(
+        event_id: field,
+        caller_hash: field,
+    ) {
+        let event: Event = events.get(event_id);
+        let venue: Venue = venues.get(event.venue_id);
+
+        // Ensure the caller is the event owner.
+        assert_eq(caller_hash, BHP1024::hash_to_field(venue.venue_owner));
+        
+        // Ensure the event was not verified to have occurred.
+        assert(!event.is_verified);
+        // Ensure the event was not refunded.
+        assert(!event.is_refunded);
+        // Ensure the event was not ended.
+        assert(!event.is_ended);
+
+        events.set(event_id, Event {
+            id: event.id,
+            venue_id: event.venue_id,
+            ticket_supply: event.ticket_supply,
+            initial_ticket_supply: event.initial_ticket_supply,
+            ticket_price: event.ticket_price,
+            redeemed_tickets: event.redeemed_tickets,
+            is_ended: true,
+            is_refunded: false,
+            is_verified: true,
+            event_owner: event.event_owner,
+            is_in_progress: event.is_in_progress,
+        });
+    }
+
+    async transition start_event(
+        event_id: field,
+    ) -> Future {
+        return finalize_start_event(event_id, BHP1024::hash_to_field(self.caller));
+    }
+    async function finalize_start_event(
+        event_id: field,
+        caller_hash: field,
+    ) {
+        let event: Event = events.get(event_id);
+        let venue: Venue = venues.get(event.venue_id);
+
+        // Ensure the caller is the event owner.
+        assert_eq(caller_hash, BHP1024::hash_to_field(venue.venue_owner));
+
+        events.set(event_id, Event {
+            id: event.id,
+            venue_id: event.venue_id,
+            ticket_supply: event.ticket_supply,
+            initial_ticket_supply: event.initial_ticket_supply,
+            ticket_price: event.ticket_price,
+            redeemed_tickets: event.redeemed_tickets,
+            is_ended: false,
+            is_refunded: false,
+            is_verified: true,
+            event_owner: event.event_owner,
+            is_in_progress: true,
+        });
+    }
+    async transition end_event(
+        event_id: field,
+    ) -> Future {
+        return finalize_end_event(event_id, BHP1024::hash_to_field(self.caller));
+    }
+    async function finalize_end_event(
+        event_id: field,
+        caller_hash: field,
+    ) {
+        let event: Event = events.get(event_id);
+        let venue: Venue = venues.get(event.venue_id);
+
+        // Ensure the caller is the event owner.
+        assert_eq(caller_hash, BHP1024::hash_to_field(venue.venue_owner));
+        
+        events.set(event_id, Event {
+            id: event.id,
+            venue_id: event.venue_id,
+            ticket_supply: event.ticket_supply,
+            initial_ticket_supply: event.initial_ticket_supply,
+            ticket_price: event.ticket_price,
+            redeemed_tickets: event.redeemed_tickets,
+            is_ended: true,
+            is_refunded: false,
+            is_verified: false,
+            event_owner: event.event_owner,
+            is_in_progress: false,
+        });
     }
 }
