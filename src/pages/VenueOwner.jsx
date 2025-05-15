@@ -2,7 +2,7 @@ import { useAppState } from "../components/AppState";
 import { Form, Input, Button, message, InputNumber } from 'antd';
 import { Transaction, WalletAdapterNetwork } from "@demox-labs/aleo-wallet-adapter-base";
 import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
-import { Address, Plaintext } from "@provablehq/sdk";
+import { Address, Plaintext } from "@provablehq/sdk/mainnet.js";
 import axios from "axios";
 import { useEffect } from "react";
 import { parse as yamlParse } from "yaml";
@@ -13,7 +13,7 @@ export default function VenueOwner() {
 
     useEffect(() => {
         if (publicKey) {
-            axios.get("https://api.testnet.aleoscan.io/v2/mapping/list_program_mapping_values/lodive_v0_1_0.aleo/venues")
+            axios.get("https://api.aleoscan.io/v2/mapping/list_program_mapping_values/lodive_v0_1_1.aleo/venues")
             .then(res => {
             const venues = res.data.result;
             const addressHash = bhp.hash(Plaintext.fromString(publicKey).toBitsLe());
@@ -43,11 +43,11 @@ export default function VenueOwner() {
 
                     const tx = Transaction.createTransaction(
                         publicKey,                          // Caller’s address
-                        WalletAdapterNetwork.TestnetBeta,   // Chain ID (make sure it matches what the network expects)
+                        WalletAdapterNetwork.MainnetBeta,   // Chain ID (make sure it matches what the network expects)
                         DEPLOYED_PROGRAM_ID,                // Program ID exactly as deployed
                         "register_venue",                   // Function name to call
                         inputs,                             // Array of input strings
-                        42150,                              // Fee amount
+                        82150,                              // Fee amount
                         false                               // Fee is public (false)
                     );
 

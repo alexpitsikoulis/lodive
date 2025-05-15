@@ -3,7 +3,7 @@ import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
 import { Transaction, WalletAdapterNetwork } from "@demox-labs/aleo-wallet-adapter-base";
 import axios from "axios";
 import { parse as yamlParse } from "yaml";
-import { Plaintext } from "@provablehq/sdk";
+import { Plaintext } from "@provablehq/sdk/mainnet.js";
 import { useEffect } from "react";
 import { Form, Input, Button, message, InputNumber } from 'antd';
 export default function EventOwner() {
@@ -12,7 +12,7 @@ export default function EventOwner() {
 
     useEffect(() => {
         if (publicKey) {
-            axios.get("https://api.testnet.aleoscan.io/v2/mapping/list_program_mapping_values/lodive_v0_1_0.aleo/events")
+            axios.get("https://api.aleoscan.io/v2/mapping/list_program_mapping_values/lodive_v0_1_1.aleo/events")
             .then(res => {
                 const events = res.data.result;
                 const addressHash = bhp.hash(Plaintext.fromString(publicKey).toBitsLe());
@@ -26,7 +26,7 @@ export default function EventOwner() {
                 setOwnedEvents(ownedEvents);
             })
 
-            axios.get("https://api.testnet.aleoscan.io/v2/mapping/list_program_mapping_values/lodive_v0_1_0.aleo/venues")
+            axios.get("https://api.aleoscan.io/v2/mapping/list_program_mapping_values/lodive_v0_1_1.aleo/venues")
             .then(res => {
                 const venues = res.data.result;
                 const addressHash = bhp.hash(Plaintext.fromString(publicKey).toBitsLe());
@@ -60,7 +60,7 @@ export default function EventOwner() {
 
                     const tx = Transaction.createTransaction(
                         publicKey,                          // Caller’s address
-                        WalletAdapterNetwork.TestnetBeta,   // Chain ID (make sure it matches what the network expects)
+                        WalletAdapterNetwork.MainnetBeta,   // Chain ID (make sure it matches what the network expects)
                         DEPLOYED_PROGRAM_ID,                // Program ID exactly as deployed
                         "register_event",                   // Function name to call
                         inputs,                             // Array of input strings
@@ -115,7 +115,7 @@ export default function EventOwner() {
                     <Button type="primary" onClick={() => {
                         const tx = Transaction.createTransaction(
                             publicKey,                          // Caller’s address
-                            WalletAdapterNetwork.TestnetBeta,   // Chain ID (make sure it matches what the network expects)
+                            WalletAdapterNetwork.MainnetBeta,   // Chain ID (make sure it matches what the network expects)
                             DEPLOYED_PROGRAM_ID,                // Program ID exactly as deployed
                             "start_event",                   // Function name to call
                             [`${event.id}`],                             // Array of input strings
@@ -132,7 +132,7 @@ export default function EventOwner() {
                             alert("Event start failed");
                         });
                     }}>
-                        {!event.is_started && !event.is_ended ? "Start Event" : "End Event"}
+                        {!event.is_in_progress && !event.is_ended ? "Start Event" : "End Event"}
                     </Button>
                 </div>
             ))}

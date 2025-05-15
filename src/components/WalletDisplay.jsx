@@ -10,7 +10,7 @@ export const WalletDisplay = () => {
         {publicKey ?
         <div>
             <h3>✅ Connected Wallet</h3>
-            <p><strong>Wallet Address:</strong> <a href={`https://testnet.explorer.provable.com/address/${publicKey}`} target="_">{publicKey}</a></p>
+            <p><strong>Wallet Address:</strong> <a href={`https://mainnet.explorer.provable.com/address/${publicKey}`} target="_">{publicKey}</a></p>
             <Button style={{ marginTop: "1vh" }} onClick={disconnect}>Disconnect</Button>
             <LatestBalance userAddress={publicKey} />
         </div>

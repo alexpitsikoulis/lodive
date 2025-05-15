@@ -1,5 +1,5 @@
 {
-  "program": "lodive_v0_1_0.aleo",
+  "program": "lodive_v0_1_1.aleo",
   "version": "0.1.0",
   "description": "",
   "license": "MIT",
@@ -7,7 +7,7 @@
     {
       "name": "credits.aleo",
       "location": "network",
-      "network": "testnet",
+      "network": "mainnet",
       "path": null
     }
   ]

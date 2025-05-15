@@ -24,8 +24,8 @@ export const WalletWrapper = ({ children }) => {
             }),
             new PuzzleWalletAdapter({
                 programIdPermissions: {
-                    [WalletAdapterNetwork.TestnetBeta]: [
-                        "lodive_v0_1_0.aleo",
+                    [WalletAdapterNetwork.MainnetBeta]: [
+                        "lodive_v0_1_1.aleo",
                     ],
                 },
                 appName: "lodive",
@@ -39,7 +39,7 @@ export const WalletWrapper = ({ children }) => {
         <WalletProvider
             wallets={wallets}
             decryptPermission={DecryptPermission.OnChainHistory}
-            network={WalletAdapterNetwork.TestnetBeta} // Change to 'MainnetBeta' or 'TestnetBeta' if needed
+            network={WalletAdapterNetwork.MainnetBeta} // Change to 'MainnetBeta' or 'MainnetBeta' if needed
             autoConnect
         >
             <WalletModalProvider>

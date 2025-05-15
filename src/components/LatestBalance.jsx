@@ -1,6 +1,6 @@
 import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
 import React, { useEffect, useState } from "react";
-import { AleoNetworkClient } from "@provablehq/sdk";
+import { AleoNetworkClient } from "@provablehq/sdk/mainnet.js";
 import { useAppState } from "./AppState";
 
 export const LatestBalance = () => {

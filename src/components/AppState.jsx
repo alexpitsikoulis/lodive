@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { Address, AleoNetworkClient, BHP1024 } from "@provablehq/sdk";
+import { Address, AleoNetworkClient, BHP1024 } from "@provablehq/sdk/mainnet.js";
 import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
 
 // Create the context with a default value
@@ -94,7 +94,7 @@ export const AppState = ({ children }) => {
     return (
         <DataContext.Provider
             value={{
-                DEPLOYED_PROGRAM_ID: "lodive_v0_1_0.aleo",
+                DEPLOYED_PROGRAM_ID: "lodive_v0_1_1.aleo",
                 adapterTxStatus: appState.adapterTxStatus,
                 setAdapterTxStatus,
                 txStatus: appState.txStatus,

@@ -9,7 +9,7 @@ export default function Customer() {
 
     useEffect(() => {
         console.log("Fetching events");
-        axios.get("https://api.testnet.aleoscan.io/v2/mapping/list_program_mapping_values/lodive_v0_1_0.aleo/events")
+        axios.get("https://api.aleoscan.io/v2/mapping/list_program_mapping_values/lodive_v0_1_1.aleo/events")
             .then(res => {
                 console.log(res)
                 setEvents(res.data.result);
