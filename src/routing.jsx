@@ -4,6 +4,7 @@ import Customer from "./pages/Customer.jsx";
 import EventOwner from "./pages/EventOwner.jsx";
 import VenueOwner from "./pages/VenueOwner.jsx";
 import Tickets from "./pages/Tickets.jsx";
+import Event from "./pages/Event.jsx";
 
 export const router = createBrowserRouter([
     {
@@ -41,6 +42,14 @@ export const router = createBrowserRouter([
                     </>
                 )
             },
+            {
+                path: "/events/:name",
+                element: (
+                    <>
+                        <Event />
+                    </>
+                )
+            }
         ]
     },
 ]);

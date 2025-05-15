@@ -23,7 +23,7 @@ const { Content, Footer, Sider } = Layout;
 const menuItems = [
   {
     label: <Link to="/">Buy Tickets</Link>,
-    key: "customer",
+    key: "",
     icon: <PlayCircleOutlined />,
   },
   {
@@ -32,12 +32,12 @@ const menuItems = [
     icon: <BarChartOutlined />,
   },
   {
-    label: <Link to="/event-management">Event Management</Link>,
+    label: <Link to="/event-management">Create an Event</Link>,
     key: "event-management",
     icon: <HistoryOutlined />,
   },
   {
-    label: <Link to="/venue-management">Venue Management</Link>,
+    label: <Link to="/venue-management">Create a Venue</Link>,
     key: "venue-management",
     icon: <BarChartOutlined />,
   },

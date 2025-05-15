@@ -2,10 +2,32 @@ import { useAppState } from "../components/AppState";
 import { Form, Input, Button, message, InputNumber } from 'antd';
 import { Transaction, WalletAdapterNetwork } from "@demox-labs/aleo-wallet-adapter-base";
 import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
+import { Address, Plaintext } from "@provablehq/sdk";
+import axios from "axios";
+import { useEffect } from "react";
+import { parse as yamlParse } from "yaml";
 
 export default function VenueOwner() {
-    const { publicKey, networkClient, bhp, stringToBits, DEPLOYED_PROGRAM_ID } = useAppState();
-    const { wallet, adapter } = useWallet();
+    const { networkClient, bhp, stringToBits, DEPLOYED_PROGRAM_ID, setVenues, setOwnedVenues } = useAppState();
+    const { wallet, connected, publicKey } = useWallet();
+
+    useEffect(() => {
+        if (publicKey) {
+            axios.get("https://api.testnet.aleoscan.io/v2/mapping/list_program_mapping_values/lodive_v0_1_0.aleo/venues")
+            .then(res => {
+            const venues = res.data.result;
+            const addressHash = bhp.hash(Plaintext.fromString(publicKey).toBitsLe());
+            const ownedVenues = venues
+                .filter(venue => {
+                    const venueOwner = yamlParse(venue.value).venue_owner;
+                    return venueOwner === addressHash.toString();
+                })
+                .map(venue => yamlParse(venue.value));
+                console.log(ownedVenues)
+                setOwnedVenues(ownedVenues);
+            });
+        }
+    }, [publicKey]);
 
     return (
         <div>
@@ -29,9 +51,14 @@ export default function VenueOwner() {
                         false                               // Fee is public (false)
                     );
 
-                    // const txId = wallet.adapter.requestTransaction(tx).then(res => console.log(res));
-
-                    // Do all the transaction stuff here
+                    wallet.adapter.requestTransaction(tx).then(res => {
+                        console.log(res);
+                        alert("Venue created");
+                    })
+                    .catch(err => {
+                        console.log(err);
+                        alert("Venue creation failed");
+                    });
                 }}
                 onFinishFailed={() => alert("Venue creation failed")}
             >

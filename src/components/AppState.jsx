@@ -28,6 +28,10 @@ export const AppState = ({ children }) => {
         adapterTxStatus: "",
         txStatus: "",
         transactionId: "",
+        events: [],
+        venues: [],
+        ownedEvents: [],
+        ownedVenues: [],
     });
 
     const setAdapterTxStatus = (newStatus) => {
@@ -51,6 +55,34 @@ export const AppState = ({ children }) => {
         }))
     }
 
+    const setEvents = (newEvents) => {
+        setAppState(prevState => ({
+            ...prevState,
+            events: newEvents,
+        }))
+    }
+
+    const setVenues = (newVenues) => {
+        setAppState(prevState => ({
+            ...prevState,
+            venues: newVenues,
+        }))
+    }
+
+    const setOwnedEvents = (newOwnedEvents) => {
+        setAppState(prevState => ({
+            ...prevState,
+            ownedEvents: newOwnedEvents,
+        }))
+    }
+
+    const setOwnedVenues = (newOwnedVenues) => {
+        setAppState(prevState => ({
+            ...prevState,
+            ownedVenues: newOwnedVenues,
+        }))
+    }
+
     const stringToBits = (str) =>  {
         let bitStr = Array.from(str)
             .map(char => char.charCodeAt(0).toString(2).padStart(8, '0'))
@@ -69,9 +101,17 @@ export const AppState = ({ children }) => {
                 setTxStatus,
                 transactionId: appState.transactionId,
                 setTransactionId,
+                venues: appState.venues,
+                setVenues,
+                events: appState.events,
+                setEvents,
                 networkClient,
                 bhp,
                 stringToBits,
+                ownedEvents: appState.ownedEvents,
+                setOwnedEvents,
+                ownedVenues: appState.ownedVenues,
+                setOwnedVenues,
             }}
         >
             {children}
